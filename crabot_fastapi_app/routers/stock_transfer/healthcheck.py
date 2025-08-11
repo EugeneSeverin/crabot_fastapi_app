@@ -29,4 +29,12 @@ def healthcheck():
     return {"status": "ok"}
 # endregion
 
+# region /sum
+@router.get("/sumdata", tags=["Calculacting"])
+def sumdata(first_num: str = Query(...), 
+            second_num: str = Query(...)):
+    logger.info("Sum called.")
+    return {"result": int(first_num) + int(second_num)}
+# endregion
+
 
