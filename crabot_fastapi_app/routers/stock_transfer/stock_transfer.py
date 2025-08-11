@@ -39,13 +39,6 @@ class CreateFullTaskRequest(BaseModel):
     warehouse_to_ids: List[int]
 
 
-# region /healthcheck
-@router.get("/healthcheck", tags=["Monitoring"])
-def healthcheck():
-    logger.info("Healthcheck called.")
-    return {"status": "ok"}
-# endregion
-
 # region Задания
 
 @router.post("/stock_transfer/create_full_task")

@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import make_asgi_app
 from routers.stock_transfer.stock_transfer import router as stock_transfer_router
+from routers.stock_transfer.healthcheck import router as heathcheck_routes
 from utils.system_metrics import collect_system_metrics
 import threading
+
 
 ### -------- Async
 
@@ -43,3 +45,4 @@ app = FastAPI(title='Stock Transfer',
 # app.mount("/metrics", make_asgi_app())
 
 app.include_router(stock_transfer_router)
+app.include_router(heathcheck_routes)
