@@ -9,6 +9,7 @@ services:
     environment:
       - razrab_encryption_key
       - STEAM_ACCOUNT_SECRET_KEY
+      - STOCK_TRANSFER_FASTAPI_API_KEY
       - OPTIONAL_FLAG=${OPTIONAL_FLAG:-off}
     env_file:
       - .env

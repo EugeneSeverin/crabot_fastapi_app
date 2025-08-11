@@ -33,7 +33,10 @@ import threading
 
 # app = FastAPI(title='Stock Transfer', lifespan=lifespan)
 
-app = FastAPI(title='Stock Transfer')
+app = FastAPI(title='Stock Transfer',
+              docs_url=None,
+              redoc_url=None,
+              openapi_url=None)
 
 # instrumentator = Instrumentator().instrument(app).expose(app)
 

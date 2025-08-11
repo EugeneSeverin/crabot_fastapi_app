@@ -19,13 +19,14 @@ from routers.stock_transfer.mock_responses import get_task_mock, cancel_task_moc
                                                     create_full_task_mock, get_task_products_mock, \
                                                     update_task_products_mock, get_transferrable_products_mock, \
                                                     get_regions_mock, get_transfer_mode_mock, get_warehouses_mock
-
+from dependencies.auth import require_bearer
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-router = APIRouter(tags=["Stock Transfer"])
+router = APIRouter(tags=["Stock Transfer"],
+                   dependencies=[Depends(require_bearer)])
 
 # ------- SETTINGS
 CACHE_LIFESPAN = 5
