@@ -1,9 +1,9 @@
 services:
-  nezka_fastapi_app:
-    container_name: nezka_fastapi_app
-    build: nezka_fastapi_app/
+  crabot_fastapi_app:
+    container_name: crabot_fastapi_app
+    build: crabot_fastapi_app/
     volumes:
-      - ./nezka_fastapi_app:/nezka_fastapi_app
+      - ./crabot_fastapi_app:/crabot_fastapi_app
     ports:
       - ${FASTAPI_APP_PORT}:${FASTAPI_APP_PORT}
     environment:
