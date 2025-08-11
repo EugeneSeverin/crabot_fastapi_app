@@ -43,7 +43,7 @@ class CreateFullTaskRequest(BaseModel):
 
 @router.post("/stock_transfer/create_full_task")
 async def create_full_task(request: CreateFullTaskRequest):
-    logger.info("POST /stock_transfer/create_full_task | Request: %s", request.dict())
+    logger.info("POST /stock_transfer/create_full_task | Request: %s", request.model_dump_json())
 
     try:
         task_data = {
@@ -69,7 +69,7 @@ async def get_tasks(
     end_date: str = Query(...),
     only_active: bool = Query(...)):
     logger.info(
-        "GET /stock_transfer/get_tasks | Params: start_date=%s, end_date=%s, only_active=%s, supplier_id=%s",
+        "GET /stock_transfer/get_tasks | Params: start_date=%s, end_date=%s, only_active=%s",
         start_date, end_date, only_active)
 
     try:
@@ -84,7 +84,7 @@ async def get_tasks(
 
 @router.put("/stock_transfer/update_task_status")
 async def update_task_status(request: UpdateTaskStatusRequest):
-    logger.info("PUT /stock_transfer/update_task_status | Request: %s", request.dict())
+    logger.info("PUT /stock_transfer/update_task_status | Request: %s", request.model_dump_json())
     try:
         # result = ...
         logger.info("Task status updated successfully.")
@@ -110,7 +110,7 @@ async def get_task_products(task_id: int = Query(...)):
 
 @router.post("/stock_transfer/update_task_products")
 async def update_task_products(request: TaskProductUpdateRequest):
-    logger.info("POST /stock_transfer/update_task_products | Request: %s", request.model_dump())
+    logger.info("POST /stock_transfer/update_task_products | Request: %s", request.model_dump_json())
     try:
         db_controller.update_task_products(
             task_id=request.task_id,
@@ -197,7 +197,7 @@ async def get_transfer_mode(supplier_id: int):
 
 @router.post("/stock_transfer/switch_store_mode")
 async def switch_store_mode(request: SwitchUserModeRequest):
-    logger.info("POST /stock_transfer/switch_store_mode | Request: %s", request.dict())
+    logger.info("POST /stock_transfer/switch_store_mode | Request: %s", request.model_dump_json())
     try:
         # result = ...
         logger.info("Store mode switched successfully.")
@@ -223,7 +223,7 @@ async def get_distribution_targets(supplier_id: int = Query(...)):
 
 @router.post("/stock_transfer/import_distribution_targets")
 async def upload_distribution_targets(request: DistributionImportRequest):
-    logger.info("POST /stock_transfer/import_distribution_targets | Request: %s", request.dict())
+    logger.info("POST /stock_transfer/import_distribution_targets | Request: %s", request.model_dump_json())
     try:
         # result = ...
         logger.info("Distribution targets imported successfully.")
