@@ -1,0 +1,17 @@
+services:
+  nezka_fastapi_app:
+    container_name: nezka_fastapi_app
+    build: nezka_fastapi_app/
+    volumes:
+      - ./nezka_fastapi_app:/nezka_fastapi_app
+    ports:
+      - ${FASTAPI_APP_PORT}:${FASTAPI_APP_PORT}
+    environment:
+      - STEAM_ACCOUNT_SECRET_KEY
+      - razrab_encryption_key
+      - OPTIONAL_FLAG=${OPTIONAL_FLAG:-off}
+    env_file:
+      - .env
+    command: >
+      sh -c "uvicorn main:app --host 0.0.0.0 --port ${FASTAPI_APP_PORT} --reload"
+

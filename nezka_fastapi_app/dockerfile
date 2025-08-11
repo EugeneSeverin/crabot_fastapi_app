@@ -1,0 +1,14 @@
+FROM python:3.13-alpine
+
+WORKDIR /nezka_fastapi_app
+
+# Dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# App
+COPY . .
+
+# Open the port
+# EXPOSE 8001
+
