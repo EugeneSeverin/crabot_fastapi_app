@@ -6,6 +6,7 @@ services:
       - ./crabot_fastapi_app:/crabot_fastapi_app
     ports:
       - ${FASTAPI_APP_PORT}:${FASTAPI_APP_PORT}
+    restart: unless-stopped
     environment:
       - razrab_encryption_key
       - STEAM_ACCOUNT_SECRET_KEY
