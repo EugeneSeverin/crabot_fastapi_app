@@ -43,24 +43,24 @@ class DBController:
         
         query = f"""WITH latest_stock AS (
                         SELECT s.*
-                        FROM mp_data.a_wb_stocks s
+                        FROM mp_data.a_wb_catalog_stocks s
                         INNER JOIN (
-                            SELECT nmId, MAX(time_beg) AS max_time_beg
-                            FROM mp_data.a_wb_stocks
-                            GROUP BY nmId) AS latest
-                        ON s.nmId = latest.nmId AND s.time_beg = latest.max_time_beg)
+                            SELECT wb_article_id, MAX(time_end) AS max_time_end
+                            FROM mp_data.a_wb_catalog_stocks
+                            GROUP BY wb_article_id) AS latest
+                        ON s.wb_article_id = latest.wb_article_id AND s.time_end = latest.max_time_end)
                     SELECT
                         a.article_name,
-                        s.nmId AS wb_article_id,
+                        s.wb_article_id AS wb_article_id,
                         sz.size,
-                        s.quantity AS stock_from,
+                        s.qty AS stock_from,
                         0 AS stock_to,
                         0 AS on_the_way
                     FROM latest_stock s
-                    LEFT JOIN mp_data.a_wb_article a ON a.wb_article_id = s.nmId
-                    LEFT JOIN mp_data.a_wb_izd_size sz ON sz.size_id = s.techSize_id
-                    LEFT JOIN mp_data.a_wb_warehouseName awwn ON s.warehouseName_id = awwn.warehouse_id
-                    WHERE awwn.warehouse_wb_id in ({placeholders});"""
+                    LEFT JOIN mp_data.a_wb_article a ON a.wb_article_id = s.wb_article_id
+                    LEFT JOIN mp_data.a_wb_izd_size sz ON sz.size_id = s.size_id
+                    LEFT JOIN mp_data.a_wb_warehouseName awwn ON s.warehouse_id = awwn.warehouse_id   
+                    WHERE time_end > DATE_SUB(CURRENT_DATE(), INTERVAL 1 HOUR) AND s.warehouse_id in ({placeholders});"""
         try:
 
             params = tuple(warehouse_from_ids)
