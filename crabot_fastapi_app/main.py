@@ -9,7 +9,7 @@ from routers.stock_transfer.healthcheck import router as heathcheck_routes
 from utils.system_metrics import collect_system_metrics
 from dependencies.dependencies import deps  
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

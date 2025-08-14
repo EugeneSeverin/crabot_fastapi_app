@@ -24,17 +24,52 @@ import string
 import base64
 import json
 import sys
-
-parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Для импорта из родительской директории
-sys.path.insert(0, parent_dir)
-
+from utils.logger import get_logger
 from utils.csd import encryption_key_1, encryption_key_3_name, encryption_level, max_data_size, delimiter,mySQLConnectParam_dostup
+
+logger = get_logger()
+
 delimiter = bytes(delimiter.encode('utf-8'))
 
+
 class SecurityModule:
-    # -------------------------------------------------------------------------------------------------------------
-    # --------------------------------------ВСПОМОГАТЕЛЬНЫЕ ПРИВАТНЫЕ ФУНКЦИИ--------------------------------------
-    # -------------------------------------------------------------------------------------------------------------
+    def __init__(self):
+        """
+        Инициализация SecurityModule.
+        
+        Загружает ключи шифрования и данные для подключения к базе данных.
+        """
+        try:
+            logger.debug("Инициализация модуля безопасности...")
+            logger.debug(f"Ключ шифрования 1: {encryption_key_1[:5]}*** (скрыт)")
+            logger.debug(f"Имя ключа шифрования 3: {encryption_key_3_name}")
+            logger.debug(f"Уровень шифрования: {encryption_level}")
+            logger.debug(f"Максимальный размер данных: {max_data_size} байт")
+            logger.debug(f"Разделитель (bytes): {delimiter}")
+            logger.debug("Параметры подключения к БД загружены.")
+            self.BLOCK_SIZE = 16 # Размер блока для шифрования
+            self.mySQLConnectParam = mySQLConnectParam_dostup
+            self.characters = string.ascii_letters + string.punctuation + string.digits
+            self.encryption_key_1 = encryption_key_1 # Первый ключ берем из crabot_data_settings
+            self.encryption_key_2 = self.get_encryption_key_from_db() # Второй ключ достается из БД
+            self.encryption_key_3 = os.environ.get(encryption_key_3_name) # Третий ключ - переменная системного окружения
+            self.encryption_key_list = [self.encryption_key_1,self.encryption_key_2,self.encryption_key_3] # Cобрали лист из ключей, чтобы удобнее его передавать
+            self.encryption_level = encryption_level # Установили количество уровней шифрования
+            salt_iv_dict = self.get_default_salt_and_iv() # Скачали дефолтную соль и iv из БД, чтобы шифровать/дешифровать названия модулей
+            logger.debug(f"Соль и iv: {salt_iv_dict}")
+            self.default_salt = salt_iv_dict['salt']
+            self.default_iv = salt_iv_dict['iv']
+            
+        #    print(f'Соль {self.default_salt}. Длина: {len(self.default_salt)}')
+        #    print(f'IV {self.default_iv}. Длина {len(self.default_iv)}')
+        #    print(f'Ключ_1 длина {"больше" if len(self.encryption_key_1) > 10 else "="} {10 if len(self.encryption_key_1) > 10 else len(self.encryption_key_1)}')
+        #    print(f'Ключ_2 длина {"больше" if len(self.encryption_key_2) > 10 else "="} {10 if len(self.encryption_key_2) > 10 else len(self.encryption_key_2)}')
+        #    print(f'Ключ_3 длина {"больше" if len(self.encryption_key_3) > 10 else "="} {10 if len(self.encryption_key_3) > 10 else len(self.encryption_key_3)}')
+
+        except Exception as ex:
+            print(f"{type(ex).__name__}: {ex}\n{traceback.format_exc()}")
+    
+    
     # Скачивание encryption_key_2 из БД
     def get_encryption_key_from_db(self): 
         connection = pymysql.connect(**self.mySQLConnectParam)
@@ -264,36 +299,7 @@ class SecurityModule:
         derandomized_string = randomized_string[data_address+address_size:data_address+data_length+address_size] # Находим чувствительную информацию
         return derandomized_string
 
-    # -------------------------------------------------------------------------------------------------------------
-    # -------------------------------------- ОСНОВНЫЕ ФУНКЦИИ -----------------------------------------------------
-    # -------------------------------------------------------------------------------------------------------------
-    def __init__(self):
-        """
-        Инициализация SecurityModule.
-        
-        Загружает ключи шифрования и данные для подключения к базе данных.
-        """
-        try:
-            self.BLOCK_SIZE = 16 # Размер блока для шифрования
-            self.mySQLConnectParam = mySQLConnectParam_dostup
-            self.characters = string.ascii_letters + string.punctuation + string.digits
-            self.encryption_key_1 = encryption_key_1 # Первый ключ берем из crabot_data_settings
-            self.encryption_key_2 = self.get_encryption_key_from_db() # Второй ключ достается из БД
-            self.encryption_key_3 = os.environ.get(encryption_key_3_name) # Третий ключ - переменная системного окружения
-            self.encryption_key_list = [self.encryption_key_1,self.encryption_key_2,self.encryption_key_3] # Cобрали лист из ключей, чтобы удобнее его передавать
-            self.encryption_level = encryption_level # Установили количество уровней шифрования
-            salt_iv_dict = self.get_default_salt_and_iv() # Скачали дефолтную соль и iv из БД, чтобы шифровать/дешифровать названия модулей
-            self.default_salt = salt_iv_dict['salt']
-            self.default_iv = salt_iv_dict['iv']
-            
-        #    print(f'Соль {self.default_salt}. Длина: {len(self.default_salt)}')
-        #    print(f'IV {self.default_iv}. Длина {len(self.default_iv)}')
-        #    print(f'Ключ_1 длина {"больше" if len(self.encryption_key_1) > 10 else "="} {10 if len(self.encryption_key_1) > 10 else len(self.encryption_key_1)}')
-        #    print(f'Ключ_2 длина {"больше" if len(self.encryption_key_2) > 10 else "="} {10 if len(self.encryption_key_2) > 10 else len(self.encryption_key_2)}')
-        #    print(f'Ключ_3 длина {"больше" if len(self.encryption_key_3) > 10 else "="} {10 if len(self.encryption_key_3) > 10 else len(self.encryption_key_3)}')
-
-        except Exception as ex:
-            print(f"{type(ex).__name__}: {ex}\n{traceback.format_exc()}")
+    
 
     def save_access_data(self, access_data_dict):
         """  Метод сохранияем зашифрованные данные в нашей БД

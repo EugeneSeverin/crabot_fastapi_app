@@ -8,7 +8,7 @@ services:
       - ${FASTAPI_APP_PORT}:${FASTAPI_APP_PORT}
     restart: unless-stopped
     environment:
-      - nezka_encryption_key
+      - razrab_encryption_key
       # - aonika_encryption_key
       # - razrab_encryption_key
       - STEAM_ACCOUNT_SECRET_KEY
