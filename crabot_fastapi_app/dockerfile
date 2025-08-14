@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-WORKDIR /nezka_fastapi_app
+WORKDIR /crabot_fastapi_app
 
 # Dependencies
 COPY requirements.txt .

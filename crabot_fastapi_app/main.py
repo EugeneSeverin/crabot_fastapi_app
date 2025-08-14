@@ -1,48 +1,48 @@
-from fastapi import FastAPI
+# main.py
+import logging
+import threading
 from contextlib import asynccontextmanager
-# from infrastructure.db.postgres.base import postgres_db
-from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_client import make_asgi_app
+from fastapi import FastAPI
+
 from routers.stock_transfer.stock_transfer import router as stock_transfer_router
 from routers.stock_transfer.healthcheck import router as heathcheck_routes
 from utils.system_metrics import collect_system_metrics
-import threading
+from dependencies.dependencies import deps  
 
+logging.basicConfig(level=logging.INFO)
 
-### -------- Async
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        # прогреваем пул соединений (создастся при первом обращении)
+        deps.db.execute_scalar("SELECT 1")
+        logging.info("MySQL pool warmed up.")
+    except Exception as e:
+        logging.exception("MySQL warmup failed: %s", e)
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     await db.connect()
-#     threading.Thread(target=collect_system_metrics, daemon=True).start() 
-#     try:
-#         yield
-#     finally:
-#         await db.close()
+    # # системные метрики в отдельном потоке
+    # threading.Thread(target=collect_system_metrics, daemon=True).start()
 
+    try:
+        yield
+    finally:
+        # --- shutdown ---
+        try:
+            deps.db.close()  # закрываем свободные подключения
+            logging.info("MySQL pool closed.")
+        except Exception as e:
+            logging.warning("MySQL pool close failed: %s", e)
 
-### -------- Sync
-
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     postgres_db.connect()  # sync
-#     collect_system_metrics()
-#     try:
-#         yield
-#     finally:
-#         postgres_db.close()  # sync
-
-
-# app = FastAPI(title='Stock Transfer', lifespan=lifespan)
-
-app = FastAPI(title='Stock Transfer',
-              docs_url=None,
-              redoc_url=None,
-              openapi_url=None)
-
-# instrumentator = Instrumentator().instrument(app).expose(app)
-
-# app.mount("/metrics", make_asgi_app())
+app = FastAPI(title="Stock Transfer",
+                lifespan=lifespan,
+                docs_url=None,
+                redoc_url=None,
+                openapi_url=None)
 
 app.include_router(stock_transfer_router)
 app.include_router(heathcheck_routes)
+
+# from prometheus_fastapi_instrumentator import Instrumentator
+# from prometheus_client import make_asgi_app
+# Instrumentator().instrument(app).expose(app)
+# app.mount("/metrics", make_asgi_app())
