@@ -27,8 +27,6 @@ import sys
 from utils.logger import get_logger
 from utils.csd import encryption_key_1, encryption_key_3_name, encryption_level, max_data_size, delimiter,mySQLConnectParam_dostup
 
-logger = get_logger()
-
 delimiter = bytes(delimiter.encode('utf-8'))
 
 
@@ -40,13 +38,6 @@ class SecurityModule:
         Загружает ключи шифрования и данные для подключения к базе данных.
         """
         try:
-            logger.debug("Инициализация модуля безопасности...")
-            logger.debug(f"Ключ шифрования 1: {encryption_key_1[:5]}*** (скрыт)")
-            logger.debug(f"Имя ключа шифрования 3: {encryption_key_3_name}")
-            logger.debug(f"Уровень шифрования: {encryption_level}")
-            logger.debug(f"Максимальный размер данных: {max_data_size} байт")
-            logger.debug(f"Разделитель (bytes): {delimiter}")
-            logger.debug("Параметры подключения к БД загружены.")
             self.BLOCK_SIZE = 16 # Размер блока для шифрования
             self.mySQLConnectParam = mySQLConnectParam_dostup
             self.characters = string.ascii_letters + string.punctuation + string.digits
@@ -56,7 +47,6 @@ class SecurityModule:
             self.encryption_key_list = [self.encryption_key_1,self.encryption_key_2,self.encryption_key_3] # Cобрали лист из ключей, чтобы удобнее его передавать
             self.encryption_level = encryption_level # Установили количество уровней шифрования
             salt_iv_dict = self.get_default_salt_and_iv() # Скачали дефолтную соль и iv из БД, чтобы шифровать/дешифровать названия модулей
-            logger.debug(f"Соль и iv: {salt_iv_dict}")
             self.default_salt = salt_iv_dict['salt']
             self.default_iv = salt_iv_dict['iv']
             
