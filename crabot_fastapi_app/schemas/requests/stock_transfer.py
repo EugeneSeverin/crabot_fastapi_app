@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from typing import Dict, Any, List, Union, Optional
 
@@ -47,3 +47,17 @@ class DistributionTargetRow(BaseModel):
 class DistributionImportRequest(BaseModel):
     supplier_id: int
     rows: List[DistributionTargetRow]
+
+
+RuRegionName = str  # "Центральный", "Северо-Западный", ...
+
+class RegularTaskUpsertRequest(BaseModel):
+    supplier_id: int = Field(..., description="ID поставщика (если нужно логировать владельца)")
+    target: Dict[RuRegionName, float] = Field(..., description="Целевые доли по регионам, 0..1")
+    minimum: Dict[RuRegionName, float] = Field(..., description="Минимальные доли по регионам, 0..1")
+
+class RegularTaskResponse(BaseModel):
+    task_id: int
+    target: Dict[RuRegionName, float]
+    minimum: Dict[RuRegionName, float]
+    created_at: Optional[str] = None

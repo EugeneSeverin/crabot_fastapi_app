@@ -1,4 +1,4 @@
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict, Tuple
 from enum import Enum
 import json
 import logging
@@ -14,6 +14,20 @@ class DBSchema(str, Enum):
 class DBController:
     def __init__(self, db: SyncDatabase):
         self.db = db
+
+    
+    # ---------- МАППИНГ РЕГИОНОВ -> КОЛОНКИ ----------
+    # ключи — ровно как в UI/Excel
+    _REGION_COLS: Dict[str, Tuple[str, str]] = {
+        "Центральный":        ("target_central",       "min_central"),
+        "Северо-Западный":    ("target_north_west",    "min_north_west"),
+        "Приволжский":        ("target_volga",         "min_volga"),
+        "Южный":              ("target_south",         "min_south"),
+        "Уральский":          ("target_urals",         "min_urals"),
+        "Сибирский":          ("target_siberia",       "min_siberia"),
+        "Северо-Кавказский":  ("target_north_caucasus","min_north_caucasus"),
+        "Дальневосточный":    ("target_far_east",      "min_far_east"),
+    }
 
     # -------- Текущие остатки
     def get_current_stocks(self, warehouse_from_ids: List[int]) -> Optional[Any]:
@@ -150,7 +164,7 @@ class DBController:
             """
             params: List[Any] = [start_date, end_date]
             if only_active:
-                base_query += " AND is_archived = 0"
+                base_query += " AND is_archived = 0 AND task_status != 2"
             base_query += " ORDER BY task_creation_date DESC"
 
             return self.db.execute_query(base_query, params)
@@ -204,4 +218,96 @@ class DBController:
                 self.db.execute_many(insert_query, batch)
         except Exception as e:
             logging.error(f"Failed to update task products for task_id {task_id}: {e}")
+            raise
+
+
+    # ---------- РЕГУЛЯРНЫЕ ЗАДАНИЯ ----------
+    def save_regular_task(self, supplier_id: int, target: Dict[str, float], minimum: Dict[str, float]) -> int:
+        """
+        Архивирует все активные и создаёт новую регулярную запись.
+        target/minimum — доли 0..1 по русским названиям регионов.
+        """
+        try:
+            # 1) Архивируем все активные
+            self.db.execute_non_query(
+                """
+                UPDATE mp_data.a_wb_stock_transfer_regular_tasks
+                   SET is_archived = 1,
+                       task_archiving_date = NOW()
+                 WHERE is_archived = 0
+                """
+            )
+
+            # 2) Подготавливаем колонки и значения
+            col_names = ["is_archived"]
+            col_values = [0]
+            placeholders = ["%s"]
+
+            # опционально можем хранить supplier_id, если добавишь поле в таблицу
+            # col_names.append("supplier_id"); col_values.append(supplier_id); placeholders.append("%s")
+
+            for ru_name, (t_col, m_col) in self._REGION_COLS.items():
+                t_val = float(target.get(ru_name, 0.0) or 0.0)
+                m_val = float(minimum.get(ru_name, 0.0) or 0.0)
+                # клипуем 0..1 для безопасности
+                t_val = max(0.0, min(1.0, t_val))
+                m_val = max(0.0, min(1.0, m_val))
+                col_names.extend([t_col, m_col])
+                col_values.extend([t_val, m_val])
+                placeholders.extend(["%s", "%s"])
+
+            insert_sql = f"""
+                INSERT INTO mp_data.a_wb_stock_transfer_regular_tasks
+                ({", ".join(col_names)})
+                VALUES ({", ".join(placeholders)})
+            """
+            self.db.execute_non_query(insert_sql, tuple(col_values))
+
+            new_id = self.db.execute_scalar("SELECT LAST_INSERT_ID()")
+            return int(new_id)
+        except Exception as e:
+            logging.error(f"Failed to save regular task: {e}")
+            raise
+
+    def get_active_regular_task(self) -> Optional[Dict[str, Any]]:
+        """
+        Возвращает активную регулярную запись в словарном виде:
+        {
+          "task_id": ...,
+          "target": { "Центральный":0.3, ... },
+          "minimum": { "Центральный":0.05, ... },
+          "task_creation_date": "..."
+        }
+        """
+        try:
+            # выбираем последнюю неархивную
+            cols = ["task_id", "task_creation_date"] + \
+                   [c for pair in self._REGION_COLS.values() for c in pair]  # все target_* и min_*
+
+            sql = f"""
+                SELECT {", ".join(cols)}
+                FROM mp_data.a_wb_stock_transfer_regular_tasks
+                WHERE is_archived = 0
+                ORDER BY task_creation_date DESC, task_id DESC
+                LIMIT 1
+            """
+            rows = self.db.execute_query(sql)
+            if not rows:
+                return None
+
+            row = rows[0]
+            target: Dict[str, float] = {}
+            minimum: Dict[str, float] = {}
+            for ru_name, (t_col, m_col) in self._REGION_COLS.items():
+                target[ru_name]  = float(row.get(t_col) or 0.0)
+                minimum[ru_name] = float(row.get(m_col) or 0.0)
+
+            return {
+                "task_id": row["task_id"],
+                "target": target,
+                "minimum": minimum,
+                "task_creation_date": row.get("task_creation_date").isoformat() if row.get("task_creation_date") else None
+            }
+        except Exception as e:
+            logging.error(f"Failed to get active regular task: {e}")
             raise

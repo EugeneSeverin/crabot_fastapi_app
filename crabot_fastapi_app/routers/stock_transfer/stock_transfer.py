@@ -8,7 +8,8 @@ from typing import List
 from schemas.requests.stock_transfer import (
     CreateFullTaskRequest, CreateFullTaskResponse, UpdateTaskStatusRequest,
     TaskProductRequest, TaskProductUpdate, TaskProductUpdateRequest,
-    SwitchUserModeRequest, DistributionTargetRow, DistributionImportRequest)
+    SwitchUserModeRequest, DistributionTargetRow, DistributionImportRequest,
+    RegularTaskUpsertRequest, RegularTaskResponse)
 
 from services.mysql_db_service.stock_transfer_service import DBController
 from infrastructure.api.sync_controller import SyncAPIController
@@ -233,3 +234,49 @@ async def upload_distribution_targets(request: DistributionImportRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 # endregion
+
+
+# ======== ЭНДПОЙНТЫ РЕГУЛЯРОК ========
+
+@router.post("/stock_transfer/regular_tasks")
+async def save_regular_task(request: RegularTaskUpsertRequest):
+    """
+    Архивирует старые регулярные задания и создаёт новое.
+    Возвращает task_id.
+    """
+    logger.info("POST /stock_transfer/regular_tasks | Request: %s", request.model_dump_json())
+    try:
+        new_task_id = db_controller.save_regular_task(
+            supplier_id=request.supplier_id,
+            target=request.target,
+            minimum=request.minimum
+        )
+        logger.info("Regular task saved successfully. task_id=%s", new_task_id)
+        return {"status": "success", "task_id": new_task_id}
+    except Exception as e:
+        logger.error("Error in save_regular_task: %s", traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/stock_transfer/regular_tasks", response_model=RegularTaskResponse)
+async def get_active_regular_task():
+    """
+    Возвращает только одно активное (неархивированное) регулярное задание.
+    """
+    logger.info("GET /stock_transfer/regular_tasks")
+    try:
+        row = db_controller.get_active_regular_task()
+        if not row:
+            raise HTTPException(status_code=404, detail="No active regular task found")
+
+        return RegularTaskResponse(
+            task_id=row["task_id"],
+            target=row["target"],
+            minimum=row["minimum"],
+            created_at=row.get("task_creation_date")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error in get_active_regular_task: %s", traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
